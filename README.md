@@ -7,9 +7,10 @@
 
 ```
 
+----
+
 WebShambler is а simple web-crawler. 
 
-----
 
 ## Potential use cases
 :mag: Searching for specific information in WWW
@@ -18,11 +19,12 @@ WebShambler is а simple web-crawler.
 
 :floppy_disk: Saving useful web resources to improve further searches
 
-## :card_file_box: Features & TODO
+## Features & TODO
 :warning: - TODO
 
 ### General
 - :warning: Redirection
+- :warning: Multithreading
 
 ### File management
 - :warning: Dump file(s)
@@ -33,9 +35,6 @@ WebShambler is а simple web-crawler.
 - :warning: DB
 - :warning: Export in DB
 - :warning: Import from DB
-
-## :bug: Known bugs & limitations
-- [ ] ...
 
 ## :hammer_and_wrench: External dependencies
 - [Curb]( https://github.com/taf2/curb )
