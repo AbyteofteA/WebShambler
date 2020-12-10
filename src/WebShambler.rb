@@ -54,7 +54,7 @@ class WebShambler
                     return if !@url_regexp.match? uri
                 end
                 if not exists? uri
-                    @frontierURLs << ResourceData.new(uri)
+                    @frontierURLs << WebResource.new(uri)
                 end
             end
         end
@@ -123,11 +123,17 @@ class WebShambler
     end
     
     def visit
-        if uri_status = get_uri
-            uri_status.update_body
-            uri_status.collect_links
+        if resource = get_uri
             
-            uri_status.links.each do |u|
+            resource.update_head
+            if not resource.process_head
+                return false
+            end
+            
+            resource.update_body
+            resource.collect_links
+            
+            resource.links.each do |u|
                 append_uri(u)
             end
             return true

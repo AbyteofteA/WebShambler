@@ -13,15 +13,19 @@ class WebResource
     attr_reader :response_code, :head_str, :body_str
     
     attr_reader :headers
-    attr_reader :age, :content_length, :content_type
+    
+    # Some of HTTP header fields
+    attr_reader :age, :content_length, :content_type, :content_language
+    
     attr_accessor :priority
     
+    # Notes about data that is to be scraped
     attr_accessor :text, :dictionary, :multimedia
     attr_accessor :phone_numbers, :emails, :hashtags, :links
     
     def initialize(uri)
         @uri = String.new
-        @response_code
+        @response_code = String.new
         @head_str = String.new
         @body_str = String.new
         
@@ -31,6 +35,7 @@ class WebResource
         @content_type
         @priority = 0.0
         
+        # Array of paragraphs
         @text = Array.new
         @dictionary = Hash.new
         @multimedia = Array.new
@@ -42,6 +47,43 @@ class WebResource
         
         if uri.instance_of? String
             @uri = uri
+        end
+    end
+    
+    def success?
+        p @response_code
+        if @response_code[0] == "2"
+            return true
+        end
+        return false
+    end
+    def redirect?
+        if @response_code[0] == "3"
+            return true
+        end
+        return false
+    end
+    def error?
+        if response_code[0] == "4" || response_code[0] == "5"
+            return true
+        end
+        return false
+    end
+    
+    def get_header_fields
+        if @headers.instance_of? Hash
+            if @headers.has_key? "age"
+                @age = @headers["age"].to_f
+            end
+            if @headers.has_key? "content-length"
+                @content_length = @headers["content-length"].to_f
+            end
+            if @headers.has_key? "content-type"
+                @content_type = @headers["content-type"]
+            end
+            if @headers.has_key? "content-language"
+                @content_language = @headers["content-language"]
+            end
         end
     end
     
@@ -64,27 +106,23 @@ class WebResource
             pair
         end]
         
-        response_code = / \d{3} /.match http_response
+        p http_response
+        p response_code = /[0-9]{3}/.match(http_response).to_s
         
-        if response_code.instance_of? String
-            case
-            # Success
-            when response_code[0] == "2"
-                if @headers.has_key? "age"
-                    @age = @headers["age"].to_f
-                end
-                if @headers.has_key? "content-length"
-                    @content_length = @headers["content-length"].to_f
-                end
-            # Redirection
-            when response_code[0] == "3"
-                if @headers.has_key? "location"
-                    @uri = @headers["location"]
-                    update_head
-                    process_head
-                end
+        if success?
+            get_header_fields
+            puts "success"
+            return true
+        elsif redirect?
+            if @headers.has_key? "location"
+                @uri = @headers["location"]
+                update_head
+                process_head
+                return true
             end
         end
+        puts "error"
+        return false
     end
     
     def update_body
