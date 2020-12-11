@@ -23,8 +23,15 @@ WebShambler is а simple web-crawler.
 :warning: - TODO
 
 ### General
-- :warning: Redirection
+- Redirection
 - :warning: Multithreading
+
+### Data collection
+- Links
+- :warning: Text (plain text, paragraphs, dictionary)
+- :warning: Emails
+- :warning: Phone numbers
+- :warning: Multimedia (audio, font, image, model, multipart, text, video)
 
 ### File management
 - :warning: Dump file(s)

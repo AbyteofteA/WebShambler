@@ -9,9 +9,11 @@ spidey = WebShambler.new(seed, /https:\/\/en.wikipedia/)
 while spidey.visit
     spidey.update
     
-    if spidey.frontierURLs.size > 50
+    spidey.show_visited
+    spidey.show_frontier
+    
+    if spidey.frontierURLs.size > 100
         break
     end
 end
-spidey.show_visited
-spidey.show_frontier
+

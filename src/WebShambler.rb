@@ -41,19 +41,19 @@ class WebShambler
         end
         return false
     end
-    def append_uri(uri)
-        if uri.instance_of? String
+    def append_uri(uri_str)
+        if uri_str.instance_of? String
             begin
-                result = URI.parse(uri)
+                uri = URI.parse(uri_str)
             rescue => ex
                 puts "#{ex.class}: #{ex.message}"
             end
             
-            if result
+            if uri
                 if @url_regexp
-                    return if !@url_regexp.match? uri
+                    return if !@url_regexp.match? uri_str
                 end
-                if not exists? uri
+                if not exists? uri_str
                     @frontierURLs << WebResource.new(uri)
                 end
             end
