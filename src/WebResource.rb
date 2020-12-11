@@ -1,21 +1,12 @@
 
-require 'uri'
+require 'src/HTTPClient'
+require 'src/HTTPResponse'
 
-begin
-	require 'curb'
-rescue LoadError
-	warn "You need to install Curb."
-end
+require 'uri'
 
 class WebResource
     
-    attr_reader :uri,
-                :base_uri
-    attr_reader :response_code,
-                :head_str,
-                :body_str
-    
-    attr_reader :headers
+    attr_reader :response
     
     # Some of HTTP header fields
     attr_reader :age,
@@ -38,142 +29,84 @@ class WebResource
                   :links
     
     def initialize(uri)
-        if uri.is_a? URI::Generic
-            @uri = uri.to_s
-        end
-        @base_uri = URI::Generic.new(uri.scheme, uri.userinfo, uri.host, 
-                                     nil, nil, nil, nil, nil, nil).to_s
-        @response_code = String.new
-        @head_str = String.new
-        @body_str = String.new
-        
-        @headers = Hash.new
+        @response = HTTPResponse.new(uri)
+
         @age = 0
         @content_length = 0
-        @content_type
+        @content_type = String.new
+        @content_language = String.new
+        @content_location = String.new
+        @content_md5 = String.new
+        @content_encoding = String.new 
+        @content_disposition = String.new
+        @content_range = String.new
+        
         @priority = 0.0
         
-        # Array of paragraphs
         @text = Array.new
-        @dictionary = Hash.new
         @multimedia = Array.new
-        
         @phone_numbers = Array.new
         @emails = Array.new
-        @hashtags = Array.new
         @links = Array.new
     end
     
-    def success?
-        if @response_code[0] == "2"
-            return true
-        end
-        return false
+    def update_head
+        return @response = HTTPClient.head(@response.uri)
     end
-    def redirect?
-        if @response_code[0] == "3"
-            return true
-        end
-        return false
-    end
-    def error?
-        if @response_code[0] == "4" || @response_code[0] == "5"
-            return true
-        end
-        return false
+    
+    def update_body
+        return @response = HTTPClient.get(@response.uri)
     end
     
     def get_header_fields
-        if @headers.instance_of? Hash
-            if @headers.has_key? "age"
-                @age = @headers["age"].to_f
+        headers = @response.headers
+        if headers.instance_of? Hash
+            if headers.has_key? "age"
+                @age = headers["age"].to_f
             else
                 @age = 0
             end
-            if @headers.has_key? "content-length"
-                @content_length = @headers["content-length"].to_f
+            if headers.has_key? "content-length"
+                @content_length = headers["content-length"].to_f
             else
                 @content_length = 0
             end
-            if @headers.has_key? "content-type"
-                @content_type = @headers["content-type"]
+            if headers.has_key? "content-type"
+                @content_type = headers["content-type"]
             else
                 @content_type = nil
             end
-            if @headers.has_key? "content-language"
-                @content_language = @headers["content-language"]
+            if headers.has_key? "content-language"
+                @content_language = headers["content-language"]
             else
                 @content_language = nil
             end
-            if @headers.has_key? "content-location"
-                @content_location = @headers["content-location"]
+            if headers.has_key? "content-location"
+                @content_location = headers["content-location"]
             else
                 @content_location = nil
             end
-            if @headers.has_key? "content-md5"
-                @content_md5 = @headers["content-md5"]
+            if headers.has_key? "content-md5"
+                @content_md5 = headers["content-md5"]
             else
                 @content_md5 = nil
             end
-            if @headers.has_key? "content-encoding"
-                @content_encoding = @headers["content-encoding"]
+            if headers.has_key? "content-encoding"
+                @content_encoding = headers["content-encoding"]
             else
                 @content_encoding = nil
             end
-            if @headers.has_key? "content-disposition"
-                @content_disposition = @headers["content-disposition"]
+            if headers.has_key? "content-disposition"
+                @content_disposition = headers["content-disposition"]
             else
                 @content_disposition = nil
             end
-            if @headers.has_key? "content-range"
-                @content_range = @headers["content-range"]
+            if headers.has_key? "content-range"
+                @content_range = headers["content-range"]
             else
                 @content_range = nil
             end
         end
-    end
-    
-    def update_head
-        puts
-        puts("Sending http HEAD request: " + @uri)
-    
-        easy = Curl::Easy.new(@uri) do |c|
-            c.head = true 
-        end
-        easy.perform
-        
-        @head_str = easy.header_str
-    end
-    def process_head
-        http_response, *http_headers = @head_str.split(/[\r\n]+/).map {|s| s.strip}
-        @headers = Hash[http_headers.flat_map do |s| 
-            pair = s.scan(/^(\S+): (.+)/)
-            pair[-1][0].downcase!
-            pair
-        end]
-        
-        @response_code = /[0-9]{3}/.match(http_response).to_s
-        
-        if success?
-            get_header_fields
-            return true
-        elsif redirect?
-            if @headers.has_key? "location"
-                @uri = @headers["location"]
-                puts " Redirecting... " + @uri
-                update_head
-                process_head
-                return true
-            end
-        end
-        puts " ERROR"
-        return false
-    end
-    
-    def update_body
-        puts
-        puts("Sending http GET request: " + @uri)
-        @body_str = Curl.get(@uri).body_str
     end
     
     def appropriate_link?(u)
@@ -201,12 +134,13 @@ class WebResource
             return false
         end
     end
+    
     def collect_links
-        update_body if @body_str.empty? 
+        update_body if @response.body_str.empty? 
         
         # Collect links using URI.
         
-        links_extracted = URI.extract(@body_str)
+        links_extracted = URI.extract(@response.body_str)
         links_tmp1 = Array.new
         links_extracted.each do |u|
             if appropriate_link? u
@@ -219,8 +153,8 @@ class WebResource
         
         links_tmp2 = Array.new
         index = 0
-        while index < @body_str.size
-            match_data = /href\s*=\s*"([^"]*)"/.match(@body_str, index)
+        while index < @response.body_str.size
+            match_data = /href\s*=\s*"([^"]*)"/.match(@response.body_str, index)
             
             if(!match_data)
                 break
@@ -232,13 +166,12 @@ class WebResource
             if appropriate_link? match_data[1]
                 new_link = match_data[1]
             else
-                new_link = @base_uri + match_data[1]
+                new_link = @response.base_uri + match_data[1]
             end
             links_tmp2 << new_link
             index = match_data.end(1)
         end
 
-        
         @links = links_tmp1 | links_tmp2
     end
     

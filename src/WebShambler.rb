@@ -4,8 +4,10 @@ require 'src/WebResource'
 class WebShambler
     
     attr_reader :url_regexp
-    attr_reader :visitedURLs, :frontierURLs
-    attr_reader :max_age, :max_content_length
+    attr_reader :visitedURLs,
+                :frontierURLs
+    attr_reader :max_age,
+                :max_content_length
     
     def initialize(seed, url_regexp = nil)
         if url_regexp.instance_of? Regexp
@@ -30,12 +32,12 @@ class WebShambler
     
     def exists?(newURI)
         @frontierURLs.each do |u|
-            if u.uri == newURI
+            if u.response.uri == newURI
                 return true
             end
         end
         @visitedURLs.each do |u|
-            if u.uri == newURI
+            if u.response.uri == newURI
                 return true
             end
         end
@@ -54,7 +56,7 @@ class WebShambler
                     return if !@url_regexp.match? uri_str
                 end
                 if not exists? uri_str
-                    @frontierURLs << WebResource.new(uri)
+                    @frontierURLs << WebResource.new(uri_str)
                 end
             end
         end
@@ -75,7 +77,7 @@ class WebShambler
         puts "-" * str.size
         
         @visitedURLs.each do |u|
-            p u.uri
+            p u.response.uri
         end
     end
     def show_frontier
@@ -85,7 +87,7 @@ class WebShambler
         puts "-" * str.size
         
         @frontierURLs.each do |u|
-            puts " [#{u.priority}], \"#{u.uri}\""
+            puts " [#{u.priority}], \"#{u.response.uri}\""
         end
     end
     
@@ -97,7 +99,6 @@ class WebShambler
         @frontierURLs.each do |uri|
         
             uri.update_head
-            uri.process_head
             
             if uri.age > @max_age
                 @max_age = uri.age
@@ -125,12 +126,13 @@ class WebShambler
     def visit
         if resource = get_uri
             
-            resource.update_head
-            if not resource.process_head
+            if not resource.update_head
                 return false
             end
-            
-            resource.update_body
+            if not resource.update_body
+                return false
+            end
+
             resource.collect_links
             
             resource.links.each do |u|
