@@ -28,10 +28,10 @@ WebShambler is а simple web-crawler.
 
 ### Data collection
 - Links
-- :warning: Text (plain text, paragraphs, dictionary)
+- Text (plain text, paragraphs, dictionary)
 - :warning: Emails
 - :warning: Phone numbers
-- :warning: Multimedia (audio, font, image, model, multipart, text, video)
+- :warning: Media (audio, font, image, model, multipart, video)
 
 ### File management
 - :warning: Dump file(s)
@@ -43,8 +43,14 @@ WebShambler is а simple web-crawler.
 - :warning: Export in DB
 - :warning: Import from DB
 
+## :bug: Known bugs & limitations
+- [ ] Resources that don't respond should remain in frontier.
+- [ ] Media type detection is not implemented.
+- [ ] Prioritization is not implemented.
+
 ## :hammer_and_wrench: External dependencies
 - [Curb]( https://github.com/taf2/curb )
+- [Nokogiri]( https://github.com/sparklemotion/nokogiri )
 
 ## :page_facing_up: License & copyright
 This project is released under The MIT [License](LICENSE).

@@ -133,11 +133,16 @@ class WebShambler
                 return false
             end
 
-            resource.collect_links
+            #resource.collect_dictionary
+            #resource.dictionary.each do |w|
+            #    print "#{w.to_s} "
+            #end
             
+            resource.collect_links
             resource.links.each do |u|
                 append_uri(u)
             end
+            
             return true
         else
             return false

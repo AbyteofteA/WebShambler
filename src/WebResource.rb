@@ -1,8 +1,14 @@
 
+require 'src/WordData'
 require 'src/HTTPClient'
 require 'src/HTTPResponse'
 
 require 'uri'
+begin
+	require 'nokogiri'
+rescue LoadError
+	warn "You need to install Nokogiri."
+end
 
 class WebResource
     
@@ -23,10 +29,19 @@ class WebResource
     
     # Notes about data that is to be scraped
     attr_accessor :text,
-                  :multimedia,
+                  :paragraphs,
+                  :dictionary,
                   :phone_numbers,
                   :emails,
-                  :links
+                  :links,
+                  
+                  :audio, 
+                  :font, 
+                  :image, 
+                  :model, 
+                  :multipart, 
+                  :video
+                  
     
     def initialize(uri)
         @response = HTTPResponse.new(uri)
@@ -44,10 +59,19 @@ class WebResource
         @priority = 0.0
         
         @text = Array.new
-        @multimedia = Array.new
+        @paragraphs = Array.new
+        @dictionary = Array.new
         @phone_numbers = Array.new
         @emails = Array.new
         @links = Array.new
+        
+        # Arrays of media URIs.
+        @audio = Array.new
+        @font = Array.new
+        @image = Array.new
+        @model = Array.new
+        @multipart = Array.new
+        @video = Array.new
     end
     
     def update_head
@@ -153,7 +177,7 @@ class WebResource
         
         links_tmp2 = Array.new
         index = 0
-        while index < @response.body_str.size
+        while (index < @response.body_str.size) && (index >= 0)
             match_data = /href\s*=\s*"([^"]*)"/.match(@response.body_str, index)
             
             if(!match_data)
@@ -172,7 +196,88 @@ class WebResource
             index = match_data.end(1)
         end
 
-        @links = links_tmp1 | links_tmp2
+        return @links = links_tmp1 | links_tmp2
+    end
+    
+    def collect_text
+        @text = Nokogiri::HTML(@response.body_str).text
+        
+        index = 0
+        # Remove redundant new-lines.
+        while (index < @text.size) && (index >= 0)
+            match_data = /\n{3,}/.match(@text, index)
+            
+            if(match_data)
+                begin_index = match_data.begin(0)
+                @text.slice!(begin_index, match_data.end(0))
+                @text = @text.insert(begin_index, "\n\n")
+                index = begin_index
+            else
+                break
+            end
+        end
+        
+        return @text
+    end
+    
+    def collect_paragraphs
+        collect_text if @text.empty?
+        
+        @paragraphs = @text.split(/\n{2,}/)
+        
+        # Delete empty paragraphs.
+        index = 0
+        while index < @paragraphs.size
+            @paragraphs[index].rstrip!
+            if @paragraphs[index].size < 2
+                @paragraphs.delete_at(index)
+            else
+                index += 1
+            end
+        end
+        
+        return @paragraphs
+    end
+    
+    def collect_dictionary
+        collect_text if @text.empty?
+        
+        index = 0
+        while (index < @text.size) && (index >= 0)
+            match_data = /\s+\w+\s+/.match(@text, index)
+            
+            if(!match_data)
+                break
+            end
+            if(!match_data[0])
+                break
+            end
+            
+            word = WordData.new(match_data[0].strip, 1)
+            
+            # Increment frequency of the word if there is the same one.
+            word_index = 0
+            if (word_index = @dictionary.find_index(word))
+                word.freq = @dictionary[word_index].freq + 1
+                @dictionary[word_index] = word
+            else
+                @dictionary << word
+            end
+            
+            index = match_data.end(0)
+        end
+        
+        @dictionary.sort! {|a, b| b <=> a}
+        
+        return @dictionary
+    end
+    
+    def collect_media
+        @links.each do |link|
+            response = HTTPClient.head(link)
+            
+            #...
+        end
     end
     
     def <=>(other)
